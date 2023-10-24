@@ -1,17 +1,37 @@
-name: build
+name: Release and build
 
-on:
-  workflow_run:
-    workflows: [ release ]
-    types:
-      - completed
+on: push
 
 permissions:
   contents: write
 
 jobs:
+  release:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Generate Changelog
+        run: |
+          curl -L https://github.com/prewk/bytis/suites/17574641877/artifacts/1004105296 -o bytis
+          chmod +x bytis
+          ./bytis next-version > next_version.txt
+          echo "NEXT_VERSION=$(cat next_version.txt)" >> $GITHUB_ENV
+          ./bytis -H "feat=Features" -H "fix=Fixes" -H "chore=Chores" -H "ci=CI" -U "https://github.com/prewk/bytis/commit/{id}" markdown > ${{ github.workspace }}-CHANGELOG.md
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: ${{ github.workspace }}-CHANGELOG.md
+          tag_name: ${{ env.NEXT_VERSION }}
+      - uses: actions/upload-artifact@master
+        with:
+          name: next_version
+          path: next_version.txt
   build:
     name: ${{ matrix.platform.os_name }} with rust ${{ matrix.toolchain }}
+    needs: release
     runs-on: ${{ matrix.platform.os }}
     strategy:
       fail-fast: false
@@ -57,9 +77,16 @@ jobs:
         if: matrix.platform.os_name == 'Windows-x86_64'
       - name: Generate SHA-256
         run: shasum -a 256 target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }} | cut -d ' ' -f 1 > target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.sha256
+      - name: Download next_version artifact
+        uses: actions/download-artifact@master
+        with:
+          name: next_version
+          path: next_version.txt
+      - run: echo "NEXT_VERSION=$(cat next_version.txt)" >> $GITHUB_ENV
       - name: Release binary and SHA-256 checksum to GitHub
         uses: softprops/action-gh-release@v1
         with:
           files: |
             target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
             target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.sha256
+          tag_name: ${{ env.NEXT_VERSION }}
