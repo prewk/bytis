@@ -16,8 +16,9 @@ jobs:
       - name: Generate Changelog
         run: |
           chmod +x bytis
-          ./bytis next-version > next_version.txt
-          echo "NEXT_VERSION=$(cat next_version.txt)" >> $GITHUB_ENV
+          mkdir build
+          ./bytis next-version > build/next_version.txt
+          echo "NEXT_VERSION=$(cat build/next_version.txt)" >> $GITHUB_ENV
           ./bytis -H "feat=Features" -H "fix=Fixes" -H "chore=Chores" -H "ci=CI" -U "https://github.com/prewk/bytis/commit/{id}" markdown > ${{ github.workspace }}-CHANGELOG.md
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -26,8 +27,8 @@ jobs:
           tag_name: ${{ env.NEXT_VERSION }}
       - uses: actions/upload-artifact@master
         with:
-          name: next_version
-          path: next_version.txt
+          name: next_version.txt
+          path: build
   build:
     name: ${{ matrix.platform.os_name }} with rust ${{ matrix.toolchain }}
     needs: release
@@ -79,9 +80,9 @@ jobs:
       - name: Download next_version artifact
         uses: actions/download-artifact@master
         with:
-          name: next_version
-          path: next_version.txt
-      - run: echo "NEXT_VERSION=$(cat next_version.txt)" >> $GITHUB_ENV
+          name: next_version.txt
+          path: build
+      - run: echo "NEXT_VERSION=$(cat build/next_version.txt)" >> $GITHUB_ENV
       - name: Release binary and SHA-256 checksum to GitHub
         uses: softprops/action-gh-release@v1
         with:
