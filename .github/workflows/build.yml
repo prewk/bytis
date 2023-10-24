@@ -15,7 +15,6 @@ jobs:
           fetch-depth: 0
       - name: Generate Changelog
         run: |
-          curl -L https://github.com/prewk/bytis/suites/17574641877/artifacts/1004105296 -o bytis
           chmod +x bytis
           ./bytis next-version > next_version.txt
           echo "NEXT_VERSION=$(cat next_version.txt)" >> $GITHUB_ENV
