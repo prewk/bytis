@@ -1,0 +1,21 @@
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Generate Changelog
+        run: |
+          curl -L https://github.com/prewk/bytis/releases/download/0.0.1/bytis-linux-amd64 -o bytis
+          chmod +x bytis
+          echo "NEXT_VERSION=$(./bytis next-version)" >> $GITHUB_ENV
+          ./bytis -H "feat=Features" -H "fix=Fixes" -H "chore=Chores" -H "ci=CI" -U "https://github.com/prewk/bytis/commit/{id}" markdown > ${{ github.workspace }}-CHANGELOG.md
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: ${{ github.workspace }}-CHANGELOG.md
+          tag_name: ${{ env.NEXT_VERSION }}
