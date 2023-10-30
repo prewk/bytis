@@ -78,11 +78,7 @@ fn run(output: Output, config: &Config) -> Result<String, String> {
 
     match output {
         Output::NextVersion => Ok(next_version.to_string()),
-        Output::Markdown => Ok(create_markdown_changelog(
-            &next_version.to_string(),
-            &grouped,
-            &config,
-        )),
+        Output::Markdown => Ok(create_markdown_changelog(&grouped, &config)),
         Output::Mrkdwn => Ok(create_mrkdwn_changelog(&grouped, &config)),
     }
 }

@@ -3,11 +3,10 @@ use std::collections::HashMap;
 use crate::data::{Config, IdConventionalCommit};
 
 pub fn create_markdown_changelog(
-    version: &str,
     grouped: &HashMap<String, Vec<IdConventionalCommit>>,
     config: &Config,
 ) -> String {
-    let mut output = format!("# {}\n", version);
+    let mut output = String::new();
 
     for (_type, commits) in grouped {
         let sub_heading = config.headings.get(_type);
