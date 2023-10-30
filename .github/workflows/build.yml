@@ -1,38 +1,15 @@
-name: Release and build
+name: Build
 
-on: push
+on:
+  release:
+    types: [ created ]
 
 permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Generate Changelog
-        run: |
-          curl https://github.com/prewk/bytis/releases/latest/download/bytis-linux-amd64 -o bytis
-          chmod +x bytis
-          mkdir build
-          ./bytis next-version > build/next_version.txt
-          echo "NEXT_VERSION=$(cat build/next_version.txt)" >> $GITHUB_ENV
-          ./bytis -H "feat=Features" -H "fix=Fixes" -H "chore=Chores" -H "ci=CI" -U "https://github.com/prewk/bytis/commit/{id}" markdown > ${{ github.workspace }}-CHANGELOG.md
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          body_path: ${{ github.workspace }}-CHANGELOG.md
-          tag_name: ${{ env.NEXT_VERSION }}
-      - uses: actions/upload-artifact@master
-        with:
-          name: next_version.txt
-          path: build
   build:
     name: ${{ matrix.platform.os_name }} with rust ${{ matrix.toolchain }}
-    needs: release
     runs-on: ${{ matrix.platform.os }}
     strategy:
       fail-fast: false
@@ -46,10 +23,6 @@ jobs:
             os: ubuntu-20.04
             target: x86_64-unknown-linux-gnu
             bin: bytis-linux-amd64
-          # - os_name: Windows-x86_64
-          #   os: windows-latest
-          #   target: x86_64-pc-windows-msvc
-          #   bin: bytis-amd64.exe
           - os_name: macOS-x86_64
             os: macOS-latest
             target: x86_64-apple-darwin
@@ -78,16 +51,9 @@ jobs:
         if: matrix.platform.os_name == 'Windows-x86_64'
       - name: Generate SHA-256
         run: shasum -a 256 target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }} | cut -d ' ' -f 1 > target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.sha256
-      - name: Download next_version artifact
-        uses: actions/download-artifact@master
-        with:
-          name: next_version.txt
-          path: build
-      - run: echo "NEXT_VERSION=$(cat build/next_version.txt)" >> $GITHUB_ENV
       - name: Release binary and SHA-256 checksum to GitHub
         uses: softprops/action-gh-release@v1
         with:
           files: |
             target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
             target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.sha256
-          tag_name: ${{ env.NEXT_VERSION }}
